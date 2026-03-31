@@ -1,77 +1,71 @@
 const { MongoClient } = require("mongodb");
 
-// The uri string must be the connection string for the database (obtained on Atlas).
-const uri = "mongodb+srv://<user>:<password>@ckmdb.5oxvqja.mongodb.net/?retryWrites=true&w=majority";
-// Make sure the package.json contains:
-//   "dependencies": {
-//    "express": "^4.18.2",
-//    "mongodb": "^5.1.0"
+// 🚨 CRUCIAL: Replace <db_password> with your actual password below! 🚨
+const uri = "mongodb+srv://bibekpathak_db_user:cmps4150@bibekcmps4150.tsd4ij7.mongodb.net/?appName=bibekcmps4150";
 
-// Alternatively, to not expose the access keys, you may do:
-// MUST RUN: npm install dotenv  ON CONSOLE to begin
-// require('dotenv').config();  // To make the environment vars work, package.json must contain dependency-> "dotenv": "^16.0.0"
-// Then get the parameters hidden in .env do:
-// Do this=> const uri = process.env.mongo_uri;
-// We have also hidden the access keys in .env so alternatively we may use them:
-// so in this case, do these =>
-// const user = process.env.user;
-// const paswd = process.env.paswd;
-// uri = "mongodb+srv://" + user +":"+ paswd +"@ckmdb.5oxvqja.mongodb.net/?retryWrites=true&w=majority";
-
-
-
-// --- This is the standard stuff to get it to work on the browser
 const express = require('express');
 const app = express();
 const port = 3000;
-app.listen(port);
-console.log('Server started at http://localhost:' + port);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// routes will go here
+app.listen(port, () => {
+  console.log('Server started at http://localhost:' + port);
+});
 
 // Default route:
 app.get('/', function(req, res) {
-  const myquery = req.query;
-  var outstring = 'Starting... ';
-  res.send(outstring);
+  res.send('Starting... ');
 });
 
 app.get('/say/:name', function(req, res) {
   res.send('Hello ' + req.params.name + '!');
 });
 
-
-// Route to access database:
-// Example: URL/api/mongo/12345
+// --- ROUTE 1: Single Parameter (Hardcoded 'partID') ---
+// To test this: Add /api/mongo/12345 to your URL
 app.get('/api/mongo/:item', function(req, res) {
-const client = new MongoClient(uri);
-const searchKey = "{ partID: '" + req.params.item + "' }";
-console.log("Looking for: " + searchKey);
+  const client = new MongoClient(uri);
+  console.log("Looking for: { partID: '" + req.params.item + "' }");
 
-async function run() {
-  try {
-    const database = client.db('ckmdb');
-    const parts = database.collection('cmps415');
+  async function run() {
+    try {
+      const database = client.db('ckmdb');
+      const parts = database.collection('cmps415');
 
-    // Hardwired Query for a part that has partID '12345'
-    // const query = { partID: '12345' };
-    // But we will use the parameter provided with the route: URL/api/mongo/12345
-    
-    const query = { partID: req.params.item };
-
-    const part = await parts.findOne(query);
-    console.log(part);
-    res.send('Found this: ' + JSON.stringify(part));  //Use stringify to print a json
-
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+      const query = { partID: req.params.item };
+      const part = await parts.findOne(query);
+      
+      console.log(part);
+      res.send('Found this: ' + JSON.stringify(part)); 
+    } finally {
+      await client.close();
+    }
   }
-}
-run().catch(console.dir);
+  run().catch(console.dir);
 });
 
+// --- ROUTE 2: Two Parameters (Dynamic Key and Value) ---
+// To test this: Add /api/search/partID/12345 to your URL
+app.get('/api/search/:key/:value', function(req, res) {
+  const client = new MongoClient(uri);
+  console.log("Looking for dynamic pair: { " + req.params.key + ": '" + req.params.value + "' }");
 
+  async function run() {
+    try {
+      const database = client.db('ckmdb');
+      const parts = database.collection('cmps415');
+
+      // Dynamically constructs the query from the URL variables
+      const query = { [req.params.key]: req.params.value };
+      const part = await parts.findOne(query);
+      
+      console.log(part);
+      res.send('Found this dynamic result: ' + JSON.stringify(part)); 
+    } finally {
+      await client.close();
+    }
+  }
+  run().catch(console.dir);
+});
